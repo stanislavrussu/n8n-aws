@@ -1,0 +1,148 @@
+{
+  "name": "Partner order webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "partner-order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6c1f6a0e-1a01-4c1e-9d10-000000000001",
+      "name": "Partner webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "6c1f6a0e-1a01-4c1e-9d10-0000000000aa"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "6c1f6a0e-1a01-4c1e-9d10-0000000000c1",
+              "leftValue": "={{ $json.body.orderId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "6c1f6a0e-1a01-4c1e-9d10-0000000000c2",
+              "leftValue": "={{ $json.body.amount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6c1f6a0e-1a01-4c1e-9d10-000000000002",
+      "name": "Valid order?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6c1f6a0e-1a01-4c1e-9d10-0000000000d1",
+              "name": "orderId",
+              "value": "={{ $json.body.orderId }}",
+              "type": "string"
+            },
+            {
+              "id": "6c1f6a0e-1a01-4c1e-9d10-0000000000d2",
+              "name": "partner",
+              "value": "={{ $json.body.partner || 'unknown' }}",
+              "type": "string"
+            },
+            {
+              "id": "6c1f6a0e-1a01-4c1e-9d10-0000000000d3",
+              "name": "amount",
+              "value": "={{ Number($json.body.amount) }}",
+              "type": "number"
+            },
+            {
+              "id": "6c1f6a0e-1a01-4c1e-9d10-0000000000d4",
+              "name": "priority",
+              "value": "={{ Number($json.body.amount) >= 1000 ? 'high' : 'normal' }}",
+              "type": "string"
+            },
+            {
+              "id": "6c1f6a0e-1a01-4c1e-9d10-0000000000d5",
+              "name": "receivedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6c1f6a0e-1a01-4c1e-9d10-000000000003",
+      "name": "Normalize order",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [440, -100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'accepted', orderId: $json.orderId, partner: $json.partner, priority: $json.priority, receivedAt: $json.receivedAt, executionId: $execution.id } }}",
+        "options": {
+          "responseCode": 202
+        }
+      },
+      "id": "6c1f6a0e-1a01-4c1e-9d10-000000000004",
+      "name": "Respond 202 Accepted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, -100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { status: 'rejected', reason: 'orderId (string) and amount (> 0) are required' } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "6c1f6a0e-1a01-4c1e-9d10-000000000005",
+      "name": "Respond 400 Bad Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 100]
+    }
+  ],
+  "connections": {
+    "Partner webhook": {
+      "main": [[{ "node": "Valid order?", "type": "main", "index": 0 }]]
+    },
+    "Valid order?": {
+      "main": [
+        [{ "node": "Normalize order", "type": "main", "index": 0 }],
+        [{ "node": "Respond 400 Bad Request", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalize order": {
+      "main": [[{ "node": "Respond 202 Accepted", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

@@ -1,0 +1,12 @@
+# Copy to terraform.tfvars and adjust.
+domain_zone = "n8n.example.com"
+hostname    = "n8n.example.com"
+alarm_email = "ops@example.com"
+
+enable_queue_mode = true
+
+enable_alb_auth = true
+auth_users      = ["you@example.com"]
+
+# "acm" once domain_zone is delegated to Route53; "self_signed" until then.
+certificate_mode = "self_signed"
